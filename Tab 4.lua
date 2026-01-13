@@ -5,11 +5,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local remote = Instance.new("RemoteEvent")
 remote.Name = "ZenithFling"
 remote.Parent = ReplicatedStorage
-
--- ======================
--- SERVER FLING LOGIC
--- ======================
-
 local FLING_FORCE = 6000
 local UPWARD_BOOST = 1500
 local FLING_DURATION = 0.25
