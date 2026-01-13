@@ -1,0 +1,129 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Create RemoteEvent
+local remote = Instance.new("RemoteEvent")
+remote.Name = "ZenithFling"
+remote.Parent = ReplicatedStorage
+
+-- ======================
+-- SERVER FLING LOGIC
+-- ======================
+
+local FLING_FORCE = 6000
+local UPWARD_BOOST = 1500
+local FLING_DURATION = 0.25
+local SPREAD = 6
+
+local function getHRP(char)
+	return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function fling(char, direction)
+	local hrp = getHRP(char)
+	if not hrp then return end
+
+	pcall(function()
+		hrp:SetNetworkOwner(nil)
+	end)
+
+	local att = Instance.new("Attachment", hrp)
+
+	local lv = Instance.new("LinearVelocity")
+	lv.Attachment0 = att
+	lv.RelativeTo = Enum.ActuatorRelativeTo.World
+	lv.MaxForce = math.huge
+	lv.VectorVelocity =
+		(direction.Unit * FLING_FORCE) + Vector3.new(0, UPWARD_BOOST, 0)
+	lv.Parent = hrp
+
+	task.delay(FLING_DURATION, function()
+		lv:Destroy()
+		att:Destroy()
+	end)
+end
+
+remote.OnServerEvent:Connect(function(player)
+	if player.UserId ~= game.CreatorId then return end
+
+	local ownerHRP = getHRP(player.Character)
+	if not ownerHRP then return end
+
+	for _, plr in Players:GetPlayers() do
+		if plr ~= player then
+			local hrp = getHRP(plr.Character)
+			if hrp then
+				hrp.CFrame =
+					ownerHRP.CFrame *
+					CFrame.new(
+						math.random(-SPREAD, SPREAD),
+						3,
+						math.random(-SPREAD, SPREAD)
+					)
+
+				local dir = (hrp.Position - ownerHRP.Position)
+				if dir.Magnitude < 1 then
+					dir = Vector3.new(math.random(), 0, math.random())
+				end
+
+				fling(plr.Character, dir)
+			end
+		end
+	end
+end)
+
+-- ======================
+-- GUI + LOCAL SCRIPT
+-- ======================
+
+local function giveGUI(player)
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "ZenithGUI"
+	gui.ResetOnSpawn = false
+
+	local frame = Instance.new("Frame", gui)
+	frame.Size = UDim2.fromScale(0.18, 0.14)
+	frame.Position = UDim2.fromScale(0.41, 0.43)
+	frame.BackgroundColor3 = Color3.fromRGB(10, 40, 20)
+	frame.BorderSizePixel = 0
+	frame.Active = true
+	frame.Draggable = true
+
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+	local title = Instance.new("TextLabel", frame)
+	title.Size = UDim2.new(1, 0, 0.35, 0)
+	title.Text = "ZENITH"
+	title.Font = Enum.Font.GothamBold
+	title.TextSize = 22
+	title.TextColor3 = Color3.fromRGB(0, 255, 120)
+	title.BackgroundTransparency = 1
+
+	local button = Instance.new("TextButton", frame)
+	button.Size = UDim2.new(0.85, 0, 0.4, 0)
+	button.Position = UDim2.new(0.075, 0, 0.5, 0)
+	button.Text = "VOID FLING"
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = 18
+	button.TextColor3 = Color3.fromRGB(0, 0, 0)
+	button.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
+
+	Instance.new("UICorner", button).CornerRadius = UDim.new(0, 10)
+
+	local localScript = Instance.new("LocalScript", gui)
+	localScript.Source = [[
+		local ReplicatedStorage = game:GetService("ReplicatedStorage")
+		local remote = ReplicatedStorage:WaitForChild("ZenithFling")
+
+		script.Parent.Main.TextButton.MouseButton1Click:Connect(function()
+			remote:FireServer()
+		end)
+	]]
+
+	gui.Parent = player:WaitForChild("PlayerGui")
+end
+
+Players.PlayerAdded:Connect(giveGUI)
+for _, p in Players:GetPlayers() do
+	giveGUI(p)
+end
